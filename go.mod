@@ -1,3 +1,3 @@
-module github.com/qlustra/sail-core
+module github.com/qlustra/intel
 
-go 1.26.7
+go 1.27
