@@ -1,0 +1,26 @@
+[here]
+label = "Intel"
+location = "intel"
+about = "Reflection inspection, checked interrogators, rules, definitions, and compilation machinery."
+policy = "Keep framework-specific grammar semantics out of Intel."
+
+[where.definitions]
+path = "define/"
+about = "Definition construction, shared-body compilation, Scope/Leaf handlers, and typed field-use carriers."
+
+[where.definitions.browse]
+depth = 1
+files = true
+limit = 80
+
+[where.interrogators]
+path = "capture/"
+about = "Progressively narrowed interrogation, including direct structs and immediate struct-slice elements."
+
+[where.inspection]
+path = "inspect/"
+about = "Underlying reflection and field/tag inspection."
+
+[where.rules]
+path = "rules/"
+about = "Recognition, expectations, domain adapters, and evaluation-validity propagation."

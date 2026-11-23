@@ -1,16 +1,15 @@
 package intel
 
 import (
-	"github.com/qlustra/intel/types"
-	"github.com/qlustra/intel/value"
+	"github.com/qlustra/intel/capture"
+	"github.com/qlustra/intel/logic"
 )
 
-func CaptureType[T any]() *types.TypeInterrogator {
-	typeInterrogator := types.CaptureType[T]()
+func CaptureType[T any]() *capture.TypeInterrogator {
+	typeInterrogator := capture.Type[T]()
 	return typeInterrogator
 }
 
-func CaptureValue(v any) *value.ValueInterrogator {
-	valueInterrogator := value.CaptureValue(v)
-	return valueInterrogator
+func CaptureValue(v any) (*capture.ValueInterrogator, logic.Check) {
+	return capture.Value(v)
 }
