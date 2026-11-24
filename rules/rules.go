@@ -1,3 +1,7 @@
+// Package rules provides composable rules, rule sets, logical conditions, and
+// validation traces. The domain adapters under this package specialize the
+// generic APIs for identifiers, types, struct bodies, fields, properties,
+// extensions, and contracts.
 package rules
 
 import (
@@ -60,19 +64,24 @@ func (r *Rules[R, T, D]) addExpectations(rules ...R) {
 	r.rules = append(r.rules, rules...)
 }
 
+// SetExpectations replaces the set's expectations with rules, in order.
 func (r *Rules[R, T, D]) SetExpectations(rules ...R) {
 	r.ensureList()
 	r.rules = rules
 }
 
+// Expect replaces expectations; use [Rules.Also] to append instead.
 func (r *Rules[R, T, D]) Expect(rules ...R) {
 	r.SetExpectations(rules...)
 }
 
+// Also appends expectations after those already configured.
 func (r *Rules[R, T, D]) Also(rules ...R) {
 	r.addExpectations(rules...)
 }
 
+// Match configures a recognizer and its optionality. An unmatched optional
+// recognizer skips expectations and the set's encounter callback.
 func (r *Rules[R, T, D]) Match(optionality options.Optionality, recognizer R) {
 	r.optionality = optionality
 	r.recognizer = recognizer
@@ -143,6 +152,7 @@ func (r Rules[R, T, D]) encounter(subject T) logic.Check {
 	return logic.Ok()
 }
 
+// Encounter configures a callback run after expectations are satisfied.
 func (r *Rules[R, T, D]) Encounter(interceptor func(T) logic.Check) *Rules[R, T, D] {
 	r.interceptor = interceptor
 	return r

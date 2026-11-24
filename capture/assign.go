@@ -8,7 +8,10 @@ import (
 	"github.com/qlustra/intel/logic"
 )
 
-// Assign checks that value is assignable to T and returns its typed copy.
+// Assign checks Go assignability to T and returns a typed copy, without
+// conversion. Untyped nil succeeds only when T can hold nil. On failure it
+// returns the zero T and a failed check. References in the copy may still
+// share underlying data.
 func Assign[T any](value any) (T, logic.Check) {
 	var result T
 	if value == nil {

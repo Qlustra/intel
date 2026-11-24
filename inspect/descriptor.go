@@ -12,6 +12,9 @@ type FieldDescriptor struct {
 	structField   reflect.StructField
 }
 
+// CaptureFieldDescriptor records metadata from field. It does not verify that
+// the field belongs to a particular root type or that its index path resolves
+// on a value; use the checked capture field operations for those guarantees.
 func CaptureFieldDescriptor(field reflect.StructField) *FieldDescriptor {
 	typeInspector := CaptureType(field.Type)
 	tagInspector := CaptureFieldTag(field.Tag)
@@ -31,6 +34,7 @@ func (i *FieldDescriptor) FieldTypeInspector() *TypeInspector {
 	return i.typeInspector
 }
 
+// Tags returns an inspector over the field's struct tag text.
 func (i *FieldDescriptor) Tags() *FieldTagInspector {
 	return i.tags
 }
@@ -59,6 +63,9 @@ func (i *FieldDescriptor) Is[T any]() logic.Check {
 	return Is[T](i.structField.Type)
 }
 
+// Index returns the field's Go index path as stored in the descriptor. A path
+// from a promoted lookup includes the steps through its embeddings. The slice
+// is not copied; treat it as read-only and clone it before modifying it.
 func (i *FieldDescriptor) Index() []int {
 	return i.structField.Index
 }

@@ -28,6 +28,8 @@ type LeafDefinition[HOST Declaration, DECL Declaration, DEF any, P interface {
 	interceptor    LeafEncounterHandler[HOST, DECL]
 }
 
+// NewLeaf constructs a child definition and wraps it in a leaf handler.
+// Definition reuse and construction errors follow [Struct].
 func NewLeaf[HOST Declaration, DECL Declaration, DEF any, P interface {
 	*DEF
 	StructDefinitionApi[DECL]
@@ -39,11 +41,13 @@ func NewLeaf[HOST Declaration, DECL Declaration, DEF any, P interface {
 	return &LeafDefinition[HOST, DECL, DEF, P]{Definition: P(definition)}, nil
 }
 
+// Host configures lookup of the host declaration used by the encounter handler.
 func (c *LeafDefinition[HOST, DECL, DEF, P]) Host(provider ScopeHostProvider[HOST]) *LeafDefinition[HOST, DECL, DEF, P] {
 	c.lookupHost = provider
 	return c
 }
 
+// LookupHost invokes the configured host provider, or fails if none is set.
 func (c *LeafDefinition[HOST, DECL, DEF, P]) LookupHost(encounter property.Encounter) (*HOST, logic.Check) {
 	if c.lookupHost != nil {
 		return c.lookupHost(encounter)
@@ -65,11 +69,13 @@ func (c *LeafDefinition[HOST, DECL, DEF, P]) ResolveTarget(encounter property.En
 	return encounter.Property.AsStruct()
 }
 
+// Declared configures lookup of the child declaration from the compiled context.
 func (c *LeafDefinition[HOST, DECL, DEF, P]) Declared(provider ScopeDeclaredProvider[DECL]) *LeafDefinition[HOST, DECL, DEF, P] {
 	c.lookupDeclared = provider
 	return c
 }
 
+// LookupDeclared invokes the configured child provider, or fails if none is set.
 func (c *LeafDefinition[HOST, DECL, DEF, P]) LookupDeclared(encounter *rules.EncounterContext) (*DECL, logic.Check) {
 	if c.lookupDeclared != nil {
 		return c.lookupDeclared(encounter)
@@ -77,11 +83,16 @@ func (c *LeafDefinition[HOST, DECL, DEF, P]) LookupDeclared(encounter *rules.Enc
 	return nil, logic.Nope("unable to look up child declaration", "no lookup function provided")
 }
 
+// Encounter configures the callback invoked after successful child compilation
+// and declaration lookup. If unset, handling succeeds without a callback.
 func (c *LeafDefinition[HOST, DECL, DEF, P]) Encounter(interceptor LeafEncounterHandler[HOST, DECL]) *LeafDefinition[HOST, DECL, DEF, P] {
 	c.interceptor = interceptor
 	return c
 }
 
+// Handle resolves and compiles the selected property as a struct, then
+// optionally calls the configured interceptor with its carrier. Failures are
+// recorded in the shared compilation journal.
 func (c *LeafDefinition[HOST, DECL, DEF, P]) Handle(encounter property.Encounter) logic.Check {
 	if encounter.EncounterContext == nil {
 		return logic.Nope(LeafHandlingFailedCode, "leaf has no encounter context")

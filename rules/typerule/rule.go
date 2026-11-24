@@ -8,10 +8,12 @@ import (
 	"github.com/qlustra/intel/logic"
 )
 
+// Rule is a composable rule for a reflected type encounter.
 type Rule struct {
 	RuleType
 }
 
+// Type creates an unconstrained type rule to which expectations may be added.
 func Type() *Rule {
 	return &Rule{}
 }

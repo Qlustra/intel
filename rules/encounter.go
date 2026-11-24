@@ -1,3 +1,7 @@
+// Package rules composes recognition and expectations over caller-defined
+// subjects. A rule distinguishes a valid non-match from failed evaluation.
+// [ValidationBranch] records diagnostics and [EncounterContext] lets related
+// callbacks exchange declarations.
 package rules
 
 import (
@@ -12,10 +16,13 @@ const (
 	DeclarationIsNilCode        logic.CheckCode = "declaration_is_nil"
 )
 
+// EncounterContext stores named pointers for sharing declarations among
+// related encounters. Retrieve them with the typed [EncounterContext.Access].
 type EncounterContext struct {
 	declarations map[string]any
 }
 
+// Declare stores value under name, replacing any previous declaration there.
 func (e *EncounterContext) Declare[T any](name string, value *T) {
 	if e.declarations == nil {
 		e.declarations = make(map[string]any)

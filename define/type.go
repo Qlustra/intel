@@ -8,6 +8,7 @@ import (
 	"github.com/qlustra/intel/rules/typerule"
 )
 
+// TypeDefinition combines name and type rules for a type definition.
 type TypeDefinition struct {
 	interfaces.Definition
 	interfaces.Compilable[*capture.TypeInterrogator, *rules.EncounterContext]
@@ -15,6 +16,7 @@ type TypeDefinition struct {
 	Type TypeTypeRules
 }
 
+// Type constructs an empty type definition.
 func Type() *TypeDefinition {
 	return &TypeDefinition{}
 }

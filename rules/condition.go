@@ -1,3 +1,5 @@
+// Package rules provides generic rules, including logical combinations of
+// rules evaluated against the same subject.
 package rules
 
 import (
@@ -14,12 +16,16 @@ const (
 	logicalNone
 )
 
+// ConditionRule combines rules using conjunction, disjunction, or negation.
+// Construct it with [And], [Or], or [Not].
 type ConditionRule[T any, D any] struct {
 	Rule[T, D]
 	operator   logicalOperator
 	conditions []interfaces.RuleApi[T, D]
 }
 
+// And matches when every condition matches; evaluation stops at the first
+// non-match or invalid evaluation.
 func And[T any, D any](conditions ...interfaces.RuleApi[T, D]) *ConditionRule[T, D] {
 	return &ConditionRule[T, D]{
 		operator:   logicalAnd,
@@ -27,6 +33,7 @@ func And[T any, D any](conditions ...interfaces.RuleApi[T, D]) *ConditionRule[T,
 	}
 }
 
+// Or matches when at least one condition matches.
 func Or[T any, D any](conditions ...interfaces.RuleApi[T, D]) *ConditionRule[T, D] {
 	return &ConditionRule[T, D]{
 		operator:   logicalOr,
@@ -34,6 +41,7 @@ func Or[T any, D any](conditions ...interfaces.RuleApi[T, D]) *ConditionRule[T, 
 	}
 }
 
+// Not matches when none of its conditions match.
 func Not[T any, D any](conditions ...interfaces.RuleApi[T, D]) *ConditionRule[T, D] {
 	return &ConditionRule[T, D]{
 		operator:   logicalNone,

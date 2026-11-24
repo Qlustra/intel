@@ -13,7 +13,7 @@ import (
 	"github.com/qlustra/intel/rules/typerule"
 )
 
-// Declare creates and validates a fresh body declaration. Compile calls it on a
+// Declare creates and validates a fresh body declaration. [StructDefinition.Compile] calls it on a
 // cache miss. The identity must not already be registered in the supplied session;
 // passing nil starts an independent session.
 func (d *StructDefinition[HOST_DECL]) Declare(interrogator *capture.StructInterrogator, compilationJournal *CompilationJournal) *Compilation {

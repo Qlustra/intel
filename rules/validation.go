@@ -1,3 +1,5 @@
+// Package rules includes validation traces that record outcomes and nested
+// branches produced by rule evaluation.
 package rules
 
 import (
@@ -7,6 +9,14 @@ import (
 	"github.com/qlustra/intel/internal/interfaces"
 )
 
+// ValidationBranch is a node in a validation trace. An ExpectMatch callback
+// can pass its supplied branch, or a child from Branch, to a nested rule to
+// include the nested rule's diagnostics in the same trace.
+type ValidationBranch = interfaces.Validation
+
+// Validation records the outcome, reason, and child branches of an evaluation.
+// Create a root with [NewValidation]; nested rules receive branches through
+// [Validation.Branch].
 type Validation struct {
 	branch   string
 	valid    bool
@@ -14,10 +24,13 @@ type Validation struct {
 	children []*Validation
 }
 
+// Okay creates a successful validation node.
 func Okay() *Validation { return &Validation{valid: true} }
 
+// Nope creates a failed validation node with its reason.
 func Nope(reason string) *Validation { return &Validation{valid: false, reason: reason} }
 
+// NewValidation creates a successful root node with the supplied branch name.
 func NewValidation(branch string) *Validation { return &Validation{branch: branch, valid: true} }
 
 func (m *Validation) Okay() interfaces.Validation {
@@ -37,6 +50,7 @@ func (m *Validation) Note(reason string) interfaces.Validation {
 	return m
 }
 
+// Branch appends and returns a successful child node for nested diagnostics.
 func (m *Validation) Branch(branch string) interfaces.Validation {
 	match := Okay()
 	match.branch = branch
@@ -79,6 +93,7 @@ func (m *Validation) trace(level int) string {
 	return str.String()
 }
 
+// Trace renders this node and its descendants as an indented diagnostic tree.
 func (m *Validation) Trace() string {
 	return m.trace(0)
 }

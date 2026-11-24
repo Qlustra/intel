@@ -11,10 +11,12 @@ import (
 const NotTaggedWithCode logic.CheckCode = "field_not_tagged_with_tag"
 const NotTaggedAsCode logic.CheckCode = "field_not_tagged_as_format"
 
+// Rule is a composable rule for a field encounter.
 type Rule struct {
 	RuleType
 }
 
+// Field creates an unconstrained field rule to which expectations may be added.
 func Field() *Rule {
 	return &Rule{}
 }

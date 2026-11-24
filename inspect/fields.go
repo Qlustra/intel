@@ -29,6 +29,11 @@ type FieldsInspector struct {
 	descriptorMatcher DescriptorMatcher
 }
 
+// InspectFields creates a field inspector for structType. The type must be a
+// non-nil struct type, and descriptorRegistry must be non-nil. A nil matcher
+// accepts all fields at that filtering stage; the registry may be shared to
+// reuse descriptors across views. See [FieldsInspector.AllAddressable] and
+// [FieldsInspector.LookupNamed] for the available field views.
 func InspectFields(structType *TypeInspector, descriptorRegistry *DescriptorRegistry, fieldMatcher FieldMatcher, descriptorMatcher DescriptorMatcher) *FieldsInspector {
 	return &FieldsInspector{
 		DescriptorRegistry: descriptorRegistry,
@@ -66,8 +71,11 @@ func (fi *FieldsInspector) tryRegister(field reflect.StructField) (*FieldDescrip
 	return descriptor, logic.Ok()
 }
 
-// AllAddressable defaults to breadth-first order. An optional ordering selects
-// depth-first or breadth-first traversal of the same visible fields.
+// AllAddressable iterates the visible fields accepted by this inspector.
+// Traversal defaults to breadth-first; an optional ordering selects depth-first
+// or breadth-first order without changing Go's visible-field selection. The
+// yielded paths retain all promotion steps. Fields rejected by either matcher
+// are omitted.
 func (fi *FieldsInspector) AllAddressable(ordering ...options.DepthOrdering) iter.Seq2[string, *FieldDescriptor] {
 	order := options.BreadthFirst
 	if len(ordering) > 0 {
@@ -90,6 +98,8 @@ func (fi *FieldsInspector) AllAddressable(ordering ...options.DepthOrdering) ite
 	}
 }
 
+// AllDeclared iterates fields declared directly on the inspected struct in
+// declaration order, omitting fields rejected by either matcher.
 func (fi *FieldsInspector) AllDeclared() iter.Seq2[string, *FieldDescriptor] {
 	return func(yield func(string, *FieldDescriptor) bool) {
 		for field := range fi.strct.Fields() {
@@ -101,6 +111,9 @@ func (fi *FieldsInspector) AllDeclared() iter.Seq2[string, *FieldDescriptor] {
 	}
 }
 
+// LookupNamed resolves name using Go's field selection rules, including
+// promotion and ambiguity. It returns a descriptor only when resolution and
+// both matchers succeed; inspect the check before using the descriptor.
 func (fi *FieldsInspector) LookupNamed(name string) (*FieldDescriptor, logic.Check) {
 	if check := IsStructKind(fi.strct); !check.OK() {
 		return nil, logic.NopeBecause(FieldLookupFailedCode, fmt.Sprintf("field named '%q' not matched conditions", name), check)
@@ -159,12 +172,18 @@ func (fi *FieldsInspector) matchingField(parentCode logic.CheckCode, parentReaso
 	return nil, logic.NopeBecause(parentCode, parentReason, logic.Nope(FieldNotMatchedCode, ""))
 }
 
+// Embeds finds a uniquely selected visible field whose exact type is T. This
+// does not require that the field be an embedding; inspect the descriptor when
+// that distinction matters.
 func (fi *FieldsInspector) Embeds[T any]() (*FieldDescriptor, logic.Check) {
 	return fi.matchingField(FieldNotEmbedsCode, fmt.Sprintf("field embedding %v", reflect.TypeFor[T]()), func(field reflect.StructField) logic.Check {
 		return Is[T](field.Type)
 	})
 }
 
+// Satisfies finds a uniquely selected visible field whose type implements
+// interface T. T must be an interface type; the operation checks the field
+// type's method set, not a value stored in a field.
 func (fi *FieldsInspector) Satisfies[T any]() (*FieldDescriptor, logic.Check) {
 	if check := IsInterfaceKind(reflect.TypeFor[T]()); !check.OK() {
 		return nil, logic.NopeBecause(TypeDoesNotSatisfyCode, "requested contract", check)
@@ -205,6 +224,8 @@ func (fi *FieldsInspector) declaredField(description string, predicate FieldMatc
 	return nil, logic.Nope(FieldNotMatchedCode, reason)
 }
 
+// Declared finds a directly declared field by name. Unlike LookupNamed, it
+// does not search promoted fields.
 func (fi *FieldsInspector) Declared(name string) (*FieldDescriptor, logic.Check) {
 	return fi.declaredField(fmt.Sprintf("field named %q", name), func(field reflect.StructField) logic.Check {
 		if field.Name == name {
@@ -214,12 +235,16 @@ func (fi *FieldsInspector) Declared(name string) (*FieldDescriptor, logic.Check)
 	})
 }
 
+// DeclaredType finds the first directly declared field whose type is exactly
+// T, in declaration order.
 func (fi *FieldsInspector) DeclaredType[T any]() (*FieldDescriptor, logic.Check) {
 	return fi.declaredField(fmt.Sprintf("field of type %v", reflect.TypeFor[T]()), func(field reflect.StructField) logic.Check {
 		return Is[T](field.Type)
 	})
 }
 
+// DeclaredContract finds the first directly declared field whose type
+// implements interface T, in declaration order. T must be an interface type.
 func (fi *FieldsInspector) DeclaredContract[T any]() (*FieldDescriptor, logic.Check) {
 	if check := IsInterfaceKind(reflect.TypeFor[T]()); !check.OK() {
 		return nil, logic.NopeBecause(TypeDoesNotSatisfyCode, "requested contract", check)

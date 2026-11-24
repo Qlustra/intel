@@ -6,14 +6,17 @@ import (
 	"slices"
 )
 
+// Rule is a composable rule for a string identifier.
 type Rule struct {
 	RuleType
 }
 
+// String creates an unconstrained identifier rule to add expectations to.
 func String() *Rule {
 	return &Rule{}
 }
 
+// Exactly matches the identifier only when it equals expected.
 func Exactly(expected string) *Rule {
 	r := String()
 	r.Expect("exactly "+expected, func(subject string) bool {
@@ -38,6 +41,8 @@ func NotAmong(expected ...string) *Rule {
 	return r
 }
 
+// Pattern matches strings accepted by the Go regular expression pattern. A
+// malformed pattern configures an invalid rule that fails during evaluation.
 func Pattern(pattern string) *Rule {
 	r := String()
 	matcher, err := regexp.Compile(pattern)

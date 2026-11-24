@@ -1,3 +1,5 @@
+// Package rules provides the generic rule engine and the shared validation
+// facilities used by its domain adapters.
 package rules
 
 import (
@@ -9,6 +11,9 @@ import (
 )
 
 type (
+	// Rule describes a named expectation for a domain subject. Configure its
+	// predicate with [Rule.Expect], [Rule.ExpectCheck], or [Rule.ExpectMatch], and
+	// combine rules with [ConditionRule] or [Rules].
 	Rule[T any, D any] struct {
 		interfaces.RuleSeal[D]
 		name        string
@@ -45,6 +50,7 @@ func (r *Rule[T, D]) encounter(subject T) logic.Check {
 	return logic.Ok()
 }
 
+// Encounter configures a callback run after this rule's expectation matches.
 func (r *Rule[T, D]) Encounter(interceptor func(T) logic.Check) *Rule[T, D] {
 	r.interceptor = interceptor
 	return r
@@ -77,13 +83,13 @@ func (r *Rule[T, D]) ExpectCheck(name string, expectation func(T) logic.Check) {
 
 // ExpectMatch gives nested rules the current branch; the check describes the
 // match and the boolean says whether evaluating it was valid.
-func (r *Rule[T, D]) ExpectMatch(name string, expectation func(interfaces.Validation, T) (logic.Check, bool)) {
+func (r *Rule[T, D]) ExpectMatch(name string, expectation func(ValidationBranch, T) (logic.Check, bool)) {
 	r.name = name
 	r.expectation = expectation
 }
 
 // ValidateRule returns whether the rule matched and whether evaluation succeeded.
-func (r *Rule[T, D]) ValidateRule(validation interfaces.Validation, subject T) (matched bool, valid bool) {
+func (r *Rule[T, D]) ValidateRule(validation ValidationBranch, subject T) (matched bool, valid bool) {
 	ruleMatch := validation.Branch(r.name)
 	if len(r.errors) != 0 {
 		ruleMatch.Nope(errors.Join(r.errors...).Error())

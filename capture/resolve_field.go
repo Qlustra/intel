@@ -7,9 +7,18 @@ import (
 	"github.com/qlustra/intel/logic"
 )
 
-// ResolveField captures a writable field of the supplied live instance. The
-// instance must be a non-nil *R whose R is exactly the expected struct type.
-// Index is a full Go struct field path; pointer intermediates must be non-nil.
+// ResolveField captures a writable, accessible field in the supplied instance,
+// not a copy. The instance must be a non-nil pointer whose element type is
+// exactly the struct type captured by expectedRoot.
+//
+// index is the full Go field index path from that struct, including embedding
+// steps for a promoted field. Non-nil intermediate pointers are followed;
+// nil intermediate pointers cause failure and are not allocated. A pointer
+// field at the end of the path is captured as a field slot, even if it is nil.
+//
+// A failed check returns no handle. ResolveField checks that the path can be
+// used on this instance, not where the path came from. It does not modify the
+// instance or the supplied index.
 func ResolveField(instance any, expectedRoot *TypeInterrogator, index []int) (*ValueInterrogator, logic.Check) {
 	if expectedRoot == nil || expectedRoot.TypeInspector == nil || expectedRoot.typ == nil ||
 		expectedRoot.CapturedType() != expectedRoot.typ || expectedRoot.typ.Kind() != reflect.Struct {

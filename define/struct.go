@@ -15,14 +15,18 @@ import (
 	"github.com/qlustra/intel/rules/property"
 )
 
+// StructDefinitionApi is the definition and compilation contract used by
+// [Struct], [NewScope], and [NewLeaf].
 type StructDefinitionApi[DEC Declaration] interface {
 	interfaces.Definition
 	interfaces.Compilable[*capture.StructInterrogator, *rules.EncounterContext]
 	AsStructDefinition() *StructDefinition[DEC]
 }
 
+// DefinitionJournal shares constructed definitions by concrete definition type.
 type DefinitionJournal = journal.Journal[reflect.Type, interfaces.Definition]
 
+// CompilationIdentity identifies a compiled body by definition and target type.
 type CompilationIdentity struct {
 	Definition interfaces.Definition
 	Target     reflect.Type
@@ -35,18 +39,27 @@ type Compilation struct {
 	Validation interfaces.Validation
 }
 
+// CompilationJournal shares compilation results for [CompilationIdentity] values.
 type CompilationJournal = journal.Journal[CompilationIdentity, *Compilation]
 
 const DeclarationKey = "declaration"
 const JournalKey = "journal"
 
+// BodyComposition controls whether a body category is open or closed.
 type BodyComposition int
 
 const (
+	// Closed properties reject unrecognized addressable properties. Closed
+	// contracts and extensions instead require a match in their domain; they
+	// do not require every candidate to be recognized.
 	Closed BodyComposition = iota
+	// Open permits unrecognized body elements.
 	Open
 )
 
+// StructDefinition contains type and body rules for a struct declaration.
+// Struct constructs definitions with open contract and extension composition,
+// closed property composition, and breadth-first candidate ordering by default.
 type StructDefinition[HOST_DECL Declaration] struct {
 	interfaces.Definition
 	interfaces.Compilable[*capture.StructInterrogator, *rules.EncounterContext]
@@ -76,6 +89,8 @@ func (d *StructDefinition[HOST_DECL]) IgnoreDescendantsOf[T any]() *StructDefini
 }
 
 // Struct constructs a definition, wires its hooks, and defines its rules.
+// The supplied journal reuses definitions of the same concrete type; nil starts
+// an independent journal. See [StructDefinition] for defaults.
 // Child-construction failures are recorded on the shared journal and returned
 // after Define. A failed journal cannot be reused for another construction.
 func Struct[
@@ -148,18 +163,23 @@ func (d *StructDefinition[HOST_DECL]) AsStructDefinition() *StructDefinition[HOS
 	return d
 }
 
+// SetContractComposition sets the contract domain's composition; see [Closed].
 func (d *StructDefinition[HOST_DECL]) SetContractComposition(composition BodyComposition) {
 	d.ContractComposition = composition
 }
 
+// SetExtensionComposition sets the extension domain's composition; see [Closed].
 func (d *StructDefinition[HOST_DECL]) SetExtensionComposition(composition BodyComposition) {
 	d.ExtensionComposition = composition
 }
 
+// SetPropertyComposition sets whether unrecognized properties are accepted.
 func (d *StructDefinition[HOST_DECL]) SetPropertyComposition(composition BodyComposition) {
 	d.PropertyComposition = composition
 }
 
+// Contract appends a contract definition. Each definition scans candidates in
+// configured depth order and stops at its first recognized candidate.
 func (d *StructDefinition[HOST_DECL]) Contract(optionality options.Optionality, match contract.RuleAPI, rules ...contract.RuleAPI) *StructContractDefinition {
 	def := &StructContractDefinition{}
 	def.Match(optionality, match)
@@ -171,6 +191,8 @@ func (d *StructDefinition[HOST_DECL]) Contract(optionality options.Optionality, 
 	return def
 }
 
+// Extension appends an extension definition. Each definition scans candidates
+// in configured depth order and stops at its first recognized candidate.
 func (d *StructDefinition[HOST_DECL]) Extension(optionality options.Optionality, match extension.RuleAPI, rules ...extension.RuleAPI) *StructExtensionDefinition {
 	def := &StructExtensionDefinition{}
 	def.Match(optionality, match)
@@ -182,6 +204,9 @@ func (d *StructDefinition[HOST_DECL]) Extension(optionality options.Optionality,
 	return def
 }
 
+// Property appends a property definition. Every addressable property is tested
+// against every definition in registration order; matching does not stop at
+// the first definition.
 func (d *StructDefinition[HOST_DECL]) Property(optionality options.Optionality, recognizer property.RuleAPI, rules ...property.RuleAPI) *StructPropertyDefinition {
 	def := &StructPropertyDefinition{}
 	def.Match(optionality, recognizer)
@@ -201,7 +226,9 @@ func (d *StructDefinition[HOST_DECL]) Property(optionality options.Optionality, 
 //	return def
 //}
 
-// Compile routes an invocation to its shared body declaration.
+// Compile routes an invocation to the shared body declaration for this
+// definition and target type, declaring it on a cache miss. The parent context
+// supplies the shared compilation journal; nil starts an independent session.
 func (d *StructDefinition[HOST_DECL]) Compile(interrogator *capture.StructInterrogator, parentContext *rules.EncounterContext) (*rules.EncounterContext, interfaces.Validation) {
 	compilationJournal, err := compilationJournalFor(parentContext)
 	if err != nil {
@@ -250,6 +277,9 @@ type StructPropertyDefinition struct {
 	property.Rules
 }
 
+// Scope constructs a child definition and registers an optional property rule
+// that compiles it. Its default target is selected by the property's
+// [ScopeIndicator.Enter] behavior.
 func (d *StructDefinition[HOST_DECL]) Scope[
 	DECLARATION Declaration,
 	DEF any,
@@ -288,6 +318,8 @@ func (d *StructDefinition[HOST_DECL]) Scope[
 	return scope
 }
 
+// Leaf constructs a child definition and registers an optional property rule
+// that compiles the property itself as a struct, without invoking Enter.
 func (d *StructDefinition[HOST_DECL]) Leaf[
 	DECLARATION Declaration,
 	DEF any,

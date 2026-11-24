@@ -14,10 +14,12 @@ const (
 	EvaluationFailedCode logic.CheckCode = "extension_field_evaluation_failed"
 )
 
+// Rule is a composable rule for an embedded extension encounter.
 type Rule struct {
 	RuleType
 }
 
+// Extension creates an unconstrained extension rule for adding expectations.
 func Extension() *Rule {
 	return &Rule{}
 }

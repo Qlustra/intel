@@ -5,7 +5,8 @@ import (
 	"reflect"
 )
 
-// IsExportedIdentifier reports whether name is a valid Go identifier that is exported.
+// IsExportedIdentifier reports whether name is a valid, exported Go
+// identifier.
 func IsExportedIdentifier(name string) bool {
 	return token.IsIdentifier(name) && token.IsExported(name)
 }
@@ -15,10 +16,13 @@ type InterfaceInspector struct {
 	typ reflect.Type
 }
 
+// InspectInterface creates an inspector for typ. typ must be a non-nil
+// interface type for its method-set queries.
 func InspectInterface(typ reflect.Type) *InterfaceInspector {
 	return &InterfaceInspector{typ: typ}
 }
 
+// IsEmpty reports whether the interface method set has no methods.
 func (i *InterfaceInspector) IsEmpty() bool {
 	return i.typ.NumMethod() == 0
 }
@@ -27,6 +31,8 @@ type InterfaceMethodInspector struct {
 	method reflect.Method
 }
 
+// InspectInterfaceMethod looks up name on an interface type. It returns false
+// when no such method exists; typ must be a non-nil interface type.
 func InspectInterfaceMethod(typ reflect.Type, name string) (*InterfaceMethodInspector, bool) {
 	method, ok := typ.MethodByName(name)
 	if !ok {
@@ -51,6 +57,8 @@ func (i *InterfaceMethodInspector) OutputArity() int {
 	return i.method.Type.NumOut()
 }
 
+// ResultAssignableTo reports whether the method has exactly one result and
+// that result is assignable to typ. A nil typ returns false.
 func (i *InterfaceMethodInspector) ResultAssignableTo(typ reflect.Type) bool {
 	return i.OutputArity() == 1 && typ != nil && i.method.Type.Out(0).AssignableTo(typ)
 }
@@ -61,8 +69,9 @@ type ReceiverInspector struct {
 	typ reflect.Type
 }
 
-// InspectReceiver resolves pointer layers to a concrete receiver type and
-// describes its pointer method set.
+// InspectReceiver resolves any pointer layers in typ and describes the method
+// set of a pointer to the resulting concrete type. Nil and interface types
+// cannot be inspected and return false.
 func InspectReceiver(typ reflect.Type) (*ReceiverInspector, bool) {
 	if typ == nil {
 		return nil, false
@@ -84,6 +93,8 @@ func InspectReceiver(typ reflect.Type) (*ReceiverInspector, bool) {
 
 func (i *ReceiverInspector) Type() reflect.Type { return i.typ }
 
+// Method looks up an exported method in the described pointer receiver's
+// method set.
 func (i *ReceiverInspector) Method(name string) (*ReceiverMethodInspector, bool) {
 	method, ok := i.typ.MethodByName(name)
 	if !ok || method.PkgPath != "" {

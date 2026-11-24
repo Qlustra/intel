@@ -11,6 +11,11 @@ import (
 
 // --- Interrogator
 
+// StructInterrogator describes a Go struct type, not a live instance. Its
+// member views classify fields without changing Go visibility or promotion:
+// [StructFields] is the general view, [Properties] selects ordinary fields,
+// and [Embeddings] selects embedded fields. [Extensions] and [Contracts]
+// specialize embeddings by field type.
 type StructInterrogator struct {
 	fieldInterrogatorMember
 	*inspect.TypeInspector
@@ -33,7 +38,12 @@ func captureStructMatching(inspector *inspect.TypeInspector, matcher inspect.Des
 	propertiesRegistry := createFieldRegistry(captureProperty)
 	extensionRegistry := createFieldRegistry(captureExtension)
 	contractRegistry := createFieldRegistry(captureContract)
-	embeddingsRegistry := createFieldRegistry(captureEmbedding)
+	embeddings := &Embeddings{
+		fieldsInspector: inspect.InspectFields(inspector, descriptorRegistry, inspect.IsEmbedding, matcher),
+		fields:          createFieldRegistry(captureEmbedding),
+		extensions:      extensionRegistry,
+		contracts:       contractRegistry,
+	}
 
 	interrogator := &StructInterrogator{
 		TypeInspector: inspector,
@@ -44,7 +54,7 @@ func captureStructMatching(inspector *inspect.TypeInspector, matcher inspect.Des
 			properties:      propertiesRegistry,
 			extensions:      extensionRegistry,
 			contracts:       contractRegistry,
-			embeddings:      embeddingsRegistry,
+			embeddings:      embeddings,
 		},
 		Properties: &Properties{
 			fieldsInspector: inspect.InspectFields(inspector, descriptorRegistry, inspect.IsProperty, matcher),
@@ -58,12 +68,7 @@ func captureStructMatching(inspector *inspect.TypeInspector, matcher inspect.Des
 			fieldsInspector: inspect.InspectFields(inspector, descriptorRegistry, inspect.IsEmbeddedInterface, matcher),
 			fields:          contractRegistry,
 		},
-		Embeddings: &Embeddings{
-			fieldsInspector: inspect.InspectFields(inspector, descriptorRegistry, inspect.IsEmbedding, matcher),
-			fields:          embeddingsRegistry,
-			extensions:      extensionRegistry,
-			contracts:       contractRegistry,
-		},
+		Embeddings: embeddings,
 	}
 
 	return interrogator
@@ -117,6 +122,10 @@ func (i *StructInterrogator) CreateValue() *StructValueInterrogator {
 
 // --- Field
 
+// Field finds a visible struct field by name, including a promoted field,
+// subject to the current view's filters. An absent, ambiguous, or filtered
+// field produces a failed check. Success describes the field's structure,
+// not whether it can be reached on a live instance.
 func (i *StructInterrogator) Field(name string) (*FieldInterrogator, logic.Check) {
 	return i.Fields.Lookup(name)
 }
@@ -175,12 +184,16 @@ func (i *StructInterrogator) fieldPath(field *inspect.FieldDescriptor) ([]int, b
 
 // --- Property
 
+// Property finds a visible non-embedded, non-blank field by name, including
+// promoted properties. Use [Properties.Declared] for direct declarations only.
 func (i *StructInterrogator) Property(name string) (*PropertyInterrogator, logic.Check) {
 	return i.Properties.Lookup(name)
 }
 
 // --- Embeddings
 
+// NamedEmbedding looks up a visible embedded field by name. Use
+// [StructInterrogator.Field] when the field need not be embedded.
 func (i *StructInterrogator) NamedEmbedding(name string) (*EmbeddingInterrogator, logic.Check) {
 	return i.Embeddings.Named(name)
 }

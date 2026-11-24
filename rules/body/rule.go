@@ -1,3 +1,4 @@
+// Package contract defines rules over struct bodies.
 package contract
 
 import (
@@ -7,10 +8,12 @@ import (
 	"github.com/qlustra/intel/logic"
 )
 
+// Rule is a composable rule for a captured struct type encounter.
 type Rule struct {
 	RuleType
 }
 
+// Contract creates an unconstrained struct-body rule.
 func Contract() *Rule {
 	return &Rule{}
 }

@@ -18,10 +18,12 @@ const (
 	StructSliceEvaluationFailedCode logic.CheckCode = "property_struct_slice_evaluation_failed"
 )
 
+// Rule is a composable rule for a property encounter.
 type Rule struct {
 	RuleType
 }
 
+// Property creates an unconstrained property rule to which expectations may be added.
 func Property() *Rule {
 	return &Rule{}
 }

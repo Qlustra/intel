@@ -8,13 +8,16 @@ import (
 	"github.com/qlustra/intel/options"
 )
 
+// StructFields is the general member view. It can describe embeddings and
+// promoted fields. Use [Properties] to select non-embedded, non-blank fields
+// or [Embeddings] to select embedded fields.
 type StructFields struct {
 	fieldsInspector *inspect.FieldsInspector
 	fields          *FieldRegistry[FieldInterrogator]
 	properties      *FieldRegistry[PropertyInterrogator]
 	extensions      *FieldRegistry[ExtensionInterrogator]
 	contracts       *FieldRegistry[ContractInterrogator]
-	embeddings      *FieldRegistry[EmbeddingInterrogator]
+	embeddings      *Embeddings
 }
 
 func (p *StructFields) register(descriptor *inspect.FieldDescriptor) *FieldInterrogator {
@@ -26,6 +29,9 @@ func (p *StructFields) register(descriptor *inspect.FieldDescriptor) *FieldInter
 	return interrogator
 }
 
+// AllAddressable visits visible fields, including promoted fields, in the
+// requested depth order (breadth-first by default). This describes type
+// visibility, not access to storage on a particular value.
 func (p *StructFields) AllAddressable(ordering ...options.DepthOrdering) iter.Seq2[string, *FieldInterrogator] {
 	return func(yield func(string, *FieldInterrogator) bool) {
 		for name, descriptor := range p.fieldsInspector.AllAddressable(ordering...) {
@@ -36,6 +42,7 @@ func (p *StructFields) AllAddressable(ordering ...options.DepthOrdering) iter.Se
 	}
 }
 
+// AllDeclared visits fields declared directly on the struct in this view.
 func (p *StructFields) AllDeclared() iter.Seq2[string, *FieldInterrogator] {
 	return func(yield func(string, *FieldInterrogator) bool) {
 		for name, descriptor := range p.fieldsInspector.AllDeclared() {
@@ -46,6 +53,8 @@ func (p *StructFields) AllDeclared() iter.Seq2[string, *FieldInterrogator] {
 	}
 }
 
+// Lookup finds a visible field by name, including promotion. Missing,
+// ambiguous, or filtered fields fail the check; see [StructFields.Declared].
 func (p *StructFields) Lookup(name string) (*FieldInterrogator, logic.Check) {
 	descriptor, check := p.fieldsInspector.LookupNamed(name)
 	if !check.OK() {
@@ -54,6 +63,7 @@ func (p *StructFields) Lookup(name string) (*FieldInterrogator, logic.Check) {
 	return p.register(descriptor), check
 }
 
+// Declared finds a field declared directly on the struct, not a promoted one.
 func (p *StructFields) Declared(name string) (*FieldInterrogator, logic.Check) {
 	descriptor, check := p.fieldsInspector.Declared(name)
 	if !check.OK() {
