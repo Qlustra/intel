@@ -1,0 +1,8 @@
+version: '3'
+
+tasks:
+  test:
+    desc: Run the library tests and the separate public API smoke test
+    cmds:
+      - GOWORK=off go test -count=1 ./...
+      - GOWORK=off go -C testdata/publicapi test -count=1 ./...
